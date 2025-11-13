@@ -92,10 +92,47 @@ if uploaded_files:
         if not col_fecha:
             col_fecha = st.selectbox("Selecciona la columna de fecha", df_master.columns)
 
+        # ------------------------------
+        # 🔥 🔥 🔥 NUEVA SECCIÓN: SEGMENTADORES 🔥 🔥 🔥
+        # ------------------------------
         if col_monto and col_fecha:
+            # --- 🔍 Detectar posibles columnas para segmentar ---
+            posibles_productos = [c for c in df_master.columns if any(k in c for k in ['producto', 'item', 'articulo', 'sku'])]
+            posibles_locales = [c for c in df_master.columns if any(k in c for k in ['local', 'tienda', 'sucursal'])]
+            posibles_regiones = [c for c in df_master.columns if any(k in c for k in ['region', 'ciudad', 'zona', 'pais'])]
+
+            st.subheader("🎯 Segmentadores de Datos")
+
+            # Si existe columna de fecha, permitir filtrar por año
             df_master[col_fecha] = pd.to_datetime(df_master[col_fecha], errors='coerce')
             df_master = df_master.dropna(subset=[col_fecha])
+            df_master['año'] = df_master[col_fecha].dt.year
 
+            años_disponibles = sorted(df_master['año'].dropna().unique())
+            año_sel = st.radio("Selecciona el año", ["Todos"] + list(map(str, años_disponibles)), horizontal=True)
+            if año_sel != "Todos":
+                df_master = df_master[df_master['año'] == int(año_sel)]
+
+            # Filtros por producto, local y región
+            if posibles_productos:
+                productos_sel = st.multiselect("Filtrar por producto", sorted(df_master[posibles_productos[0]].unique()))
+                if productos_sel:
+                    df_master = df_master[df_master[posibles_productos[0]].isin(productos_sel)]
+
+            if posibles_locales:
+                locales_sel = st.multiselect("Filtrar por local o tienda", sorted(df_master[posibles_locales[0]].unique()))
+                if locales_sel:
+                    df_master = df_master[df_master[posibles_locales[0]].isin(locales_sel)]
+
+            if posibles_regiones:
+                regiones_sel = st.multiselect("Filtrar por región o ciudad", sorted(df_master[posibles_regiones[0]].unique()))
+                if regiones_sel:
+                    df_master = df_master[df_master[posibles_regiones[0]].isin(regiones_sel)]
+        # ------------------------------
+        # 🔥 FIN NUEVA SECCIÓN 🔥
+        # ------------------------------
+
+        if col_monto and col_fecha:
             ingreso_total = df_master[col_monto].sum()
             st.metric("Ingreso total", f"${ingreso_total:,.0f}")
 
@@ -142,17 +179,4 @@ if uploaded_files:
         numeric_cols = df_master.select_dtypes(include=['number']).columns.tolist()
         all_cols = df_master.columns.tolist()
 
-        col_x = st.selectbox("Eje X (categoría o fecha)", all_cols)
-        col_y = st.selectbox("Eje Y (valor numérico)", numeric_cols)
-        chart_type = st.radio("Tipo de gráfico", ["Barras", "Líneas", "Pastel"], horizontal=True)
-
-        if col_x and col_y:
-            if chart_type == "Barras":
-                fig = px.bar(df_master, x=col_x, y=col_y, title=f"{col_y} por {col_x}")
-            elif chart_type == "Líneas":
-                fig = px.line(df_master, x=col_x, y=col_y, title=f"{col_y} en el tiempo ({col_x})")
-            elif chart_type == "Pastel":
-                df_grouped = df_master.groupby(col_x)[col_y].sum().reset_index()
-                fig = px.pie(df_grouped, names=col_x, values=col_y, title=f"Distribución de {col_y} por {col_x}")
-            
-            st.plotly_chart(fig, use_container_width=True)
+        col_x = st.selectbox("Eje X (categoría o_
