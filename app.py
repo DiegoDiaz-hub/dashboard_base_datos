@@ -83,7 +83,7 @@ if uploaded_files:
 
         st.subheader("📊 Dashboard Automático")
 
-        # 🔍 Detección automática de columnas de fecha y monto
+        # 🔍 Detección automática de columnas clave
         col_monto = next((c for c in df_master.columns if any(k in c for k in ['venta', 'monto', 'total', 'ingreso'])), None)
         col_fecha = next((c for c in df_master.columns if any(k in c for k in ['fecha', 'date'])), None)
 
@@ -108,7 +108,34 @@ if uploaded_files:
         else:
             st.warning("⚠️ No se encontraron columnas adecuadas de fecha o monto para generar el gráfico.")
 
-        # --- 🔥 NUEVA SECCIÓN: Gráficos Personalizados ---
+        # --- 🔥 NUEVA SECCIÓN: Gráficos Automáticos Inteligentes ---
+        st.subheader("🤖 Análisis Automático")
+        posibles_productos = [c for c in df_master.columns if any(k in c for k in ['producto', 'item', 'articulo', 'sku'])]
+        posibles_locales = [c for c in df_master.columns if any(k in c for k in ['local', 'tienda', 'sucursal'])]
+        posibles_regiones = [c for c in df_master.columns if any(k in c for k in ['region', 'ciudad', 'zona', 'pais'])]
+
+        # Top 10 productos más vendidos
+        if posibles_productos and col_monto:
+            col_prod = posibles_productos[0]
+            df_top = df_master.groupby(col_prod)[col_monto].sum().reset_index().sort_values(col_monto, ascending=False).head(10)
+            fig_top = px.bar(df_top, x=col_prod, y=col_monto, title="🏆 Top 10 productos más vendidos")
+            st.plotly_chart(fig_top, use_container_width=True)
+
+        # Locales con mayores ventas
+        if posibles_locales and col_monto:
+            col_loc = posibles_locales[0]
+            df_loc = df_master.groupby(col_loc)[col_monto].sum().reset_index().sort_values(col_monto, ascending=False).head(10)
+            fig_loc = px.bar(df_loc, x=col_loc, y=col_monto, title="🏪 Locales con mayores ventas")
+            st.plotly_chart(fig_loc, use_container_width=True)
+
+        # Ventas por región o ciudad
+        if posibles_regiones and col_monto:
+            col_reg = posibles_regiones[0]
+            df_reg = df_master.groupby(col_reg)[col_monto].sum().reset_index().sort_values(col_monto, ascending=False)
+            fig_reg = px.pie(df_reg, names=col_reg, values=col_monto, title="🌎 Ventas por región o ciudad")
+            st.plotly_chart(fig_reg, use_container_width=True)
+
+        # --- 🎨 Gráficos Personalizados ---
         st.subheader("🎨 Crea tus propios gráficos")
         st.write("Selecciona qué columnas quieres graficar y el tipo de gráfico.")
 
