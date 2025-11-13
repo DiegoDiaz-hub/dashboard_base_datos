@@ -81,11 +81,12 @@ if uploaded_files:
         con.register('ventas', df_ventas)
         df_master = df_ventas.copy()
 
-        # 🔍 Detectar automáticamente columnas de fecha y monto
+        st.subheader("📊 Dashboard Automático")
+
+        # 🔍 Detección automática de columnas de fecha y monto
         col_monto = next((c for c in df_master.columns if any(k in c for k in ['venta', 'monto', 'total', 'ingreso'])), None)
         col_fecha = next((c for c in df_master.columns if any(k in c for k in ['fecha', 'date'])), None)
 
-        # Si no se detectan, pedir al usuario que elija
         if not col_monto:
             col_monto = st.selectbox("Selecciona la columna de monto o venta", df_master.columns)
         if not col_fecha:
@@ -98,12 +99,33 @@ if uploaded_files:
             ingreso_total = df_master[col_monto].sum()
             st.metric("Ingreso total", f"${ingreso_total:,.0f}")
 
-            # 🔹 Crear tendencia mensual
             try:
                 df_trend = df_master.set_index(col_fecha).resample('M')[col_monto].sum().reset_index()
-                fig_trend = px.line(df_trend, x=col_fecha, y=col_monto, title='Ingreso Mensual')
+                fig_trend = px.line(df_trend, x=col_fecha, y=col_monto, title='📈 Ingreso Mensual')
                 st.plotly_chart(fig_trend)
             except Exception as e:
                 st.warning(f"No se pudo generar la serie temporal: {e}")
         else:
             st.warning("⚠️ No se encontraron columnas adecuadas de fecha o monto para generar el gráfico.")
+
+        # --- 🔥 NUEVA SECCIÓN: Gráficos Personalizados ---
+        st.subheader("🎨 Crea tus propios gráficos")
+        st.write("Selecciona qué columnas quieres graficar y el tipo de gráfico.")
+
+        numeric_cols = df_master.select_dtypes(include=['number']).columns.tolist()
+        all_cols = df_master.columns.tolist()
+
+        col_x = st.selectbox("Eje X (categoría o fecha)", all_cols)
+        col_y = st.selectbox("Eje Y (valor numérico)", numeric_cols)
+        chart_type = st.radio("Tipo de gráfico", ["Barras", "Líneas", "Pastel"], horizontal=True)
+
+        if col_x and col_y:
+            if chart_type == "Barras":
+                fig = px.bar(df_master, x=col_x, y=col_y, title=f"{col_y} por {col_x}")
+            elif chart_type == "Líneas":
+                fig = px.line(df_master, x=col_x, y=col_y, title=f"{col_y} en el tiempo ({col_x})")
+            elif chart_type == "Pastel":
+                df_grouped = df_master.groupby(col_x)[col_y].sum().reset_index()
+                fig = px.pie(df_grouped, names=col_x, values=col_y, title=f"Distribución de {col_y} por {col_x}")
+            
+            st.plotly_chart(fig, use_container_width=True)
